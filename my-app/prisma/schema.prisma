@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id                       String      @id @default(auto()) @map("_id") @db.ObjectId
+  email                    String      @unique
+  name                     String?
+  image                    String?
+  addressId                String?     @db.ObjectId
+  address                  Address?    @relation(fields: [addressId], references: [id])
+  password                 Password?
+  employee                 Employees?
+  isVerified               Boolean     @default(false)
+  emailVerificationToken   String?
+  emailTokenExpiry         DateTime?
+  passwordResetToken       String?
+  passwordResetTokenExpiry DateTime?
+  cart                     Cart?
+  orders                   Orders[]
+  favorites                Favorites[] // קשר למועדפים - מוצר יכול להיות במועדפים של כמה משתמשים
+}
+
+model Favorites {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  user      Users   @relation(fields: [userId], references: [id])
+  userId    String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+  productId String  @db.ObjectId
+
+  @@unique([userId, productId]) // מונע כפילויות - משתמש לא יכול להוסיף את אותו מוצר פעמיים למועדפים
+}
+
+model Address {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  country     String
+  city        String
+  street      String
+  houseNumber String
+  zipCode     String
+  users       Users[]
+  Orders      Orders[]
+}
+
+model Employees {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  user       Users     @relation(fields: [userId], references: [id])
+  userId     String    @unique @db.ObjectId
+  products   Product[]
+  business   Business  @relation(fields: [businessId], references: [id])
+  businessId String    @db.ObjectId
+}
+
+model Business {
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  logo      String
+  phone     String
+  email     String
+  address   String
+  zipCode   String?
+  employees Employees[]
+}
+
+model Password {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  hash   String
+  user   Users  @relation(fields: [userId], references: [id])
+  userId String @unique @db.ObjectId
+}
+
+model Color {
+  id       String         @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  hexCode  String?
+  products ProductColor[]
+}
+
+model Size {
+  id       String        @id @default(auto()) @map("_id") @db.ObjectId
+  label    String
+  products ProductSize[]
+}
+
+model Product {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String?
+  price         Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  image         String
+  amount        Int
+  sales         Int
+  category      Category       @relation(fields: [categoryId], references: [id])
+  categoryId    String         @db.ObjectId
+  subCategory   SubCategory    @relation(fields: [subCategoryId], references: [id])
+  subCategoryId String         @db.ObjectId
+  employee      Employees      @relation(fields: [employeeId], references: [id])
+  employeeId    String         @db.ObjectId
+  orderProducts OrderProduct[]
+  cartItems     CartItem[]
+  colors        ProductColor[]
+  sizes         ProductSize[]
+  favorites     Favorites[] // קשר למועדפים - מוצר יכול להיות במועדפים של כמה משתמשים
+}
+
+model ProductColor {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+  productId String  @db.ObjectId
+  color     Color   @relation(fields: [colorId], references: [id])
+  colorId   String  @db.ObjectId
+}
+
+model ProductSize {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+  productId String  @db.ObjectId
+  size      Size    @relation(fields: [sizeId], references: [id])
+  sizeId    String  @db.ObjectId
+}
+
+model SubCategory {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  imageUrl   String
+  category   Category  @relation(fields: [categoryId], references: [id])
+  categoryId String    @db.ObjectId
+  products   Product[]
+}
+
+model Category {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  image         String
+  subCategories SubCategory[]
+  products      Product[]
+}
+
+model OrdersStatus {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  progressLevel Int
+  orders        Orders[]
+}
+
+model Orders {
+  id                   String         @id @default(auto()) @map("_id") @db.ObjectId
+  orderDate            DateTime       @default(now())
+  totalAmount          Float
+  shippingAddressId    String         @db.ObjectId
+  shippingAddress      Address        @relation(fields: [shippingAddressId], references: [id])
+  expectedDeliveryDate DateTime
+  userId               String         @db.ObjectId
+  user                 Users          @relation(fields: [userId], references: [id])
+  status               OrdersStatus   @relation(fields: [statusId], references: [id])
+  statusId             String         @db.ObjectId
+  orderProducts        OrderProduct[]
+  email                String
+  PhoneNumber          String
+  name                 String
+}
+
+model OrderProduct {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  orderId   String  @db.ObjectId
+  productId String  @db.ObjectId
+  quantity  Int
+  price     Float
+  order     Orders  @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Cart {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  user      Users      @relation(fields: [userId], references: [id])
+  userId    String     @unique @db.ObjectId
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  cartId    String  @db.ObjectId
+  cart      Cart    @relation(fields: [cartId], references: [id])
+  productId String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  size      String?
+  color     String?
+  price     Float
+}
